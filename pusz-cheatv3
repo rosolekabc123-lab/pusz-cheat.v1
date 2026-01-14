@@ -1,0 +1,277 @@
+pcall(function()
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+-- Local Player
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local HRP = Character:WaitForChild("HumanoidRootPart")
+local Camera = workspace.CurrentCamera
+
+-- GUI Parent
+local parent = game:FindFirstChild("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+local gui = Instance.new("ScreenGui", parent)
+gui.Name = "pusz-cheat"
+gui.ResetOnSpawn = false
+
+-- Toggle GUI visibility
+local guiVisible = true
+UserInputService.InputBegan:Connect(function(input, gp)
+	if not gp and input.KeyCode == Enum.KeyCode.RightControl then
+		guiVisible = not guiVisible
+		gui.Enabled = guiVisible
+	end
+end)
+
+-- Main Frame
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0, 360, 0, 550)
+main.Position = UDim2.new(0.5, -180, 0.5, -275)
+main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
+
+-- Title
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1,0,0,40)
+title.BackgroundTransparency = 1
+title.Text = "PUSZ CHEAT V3 (by Puszek_OfficialYT)"
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+
+-- Button creator
+local function createButton(text,posY,color)
+	local btn = Instance.new("TextButton", main)
+	btn.Position = UDim2.new(0,20,0,posY)
+	btn.Size = UDim2.new(0,320,0,35)
+	btn.Text = text
+	btn.BackgroundColor3 = color
+	btn.TextColor3 = Color3.new(1,1,1)
+	btn.Font = Enum.Font.Gotham
+	btn.TextSize = 16
+	Instance.new("UICorner", btn)
+	return btn
+end
+
+-- Slider creator
+local function createSlider(label,posY,min,max,default,callback)
+	local sliderFrame = Instance.new("Frame", main)
+	sliderFrame.Position = UDim2.new(0,20,0,posY)
+	sliderFrame.Size = UDim2.new(0,320,0,50)
+	sliderFrame.BackgroundTransparency = 1
+
+	local textLabel = Instance.new("TextLabel", sliderFrame)
+	textLabel.Size = UDim2.new(1,0,0,20)
+	textLabel.BackgroundTransparency = 1
+	textLabel.Text = label.." : "..default
+	textLabel.TextColor3 = Color3.fromRGB(255,255,255)
+	textLabel.Font = Enum.Font.Gotham
+	textLabel.TextSize = 14
+
+	local bar = Instance.new("Frame", sliderFrame)
+	bar.Position = UDim2.new(0,0,0,25)
+	bar.Size = UDim2.new(1,0,0,5)
+	bar.BackgroundColor3 = Color3.fromRGB(50,50,50)
+	Instance.new("UICorner", bar)
+
+	local fill = Instance.new("Frame", bar)
+	fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
+	fill.BackgroundColor3 = Color3.fromRGB(114,137,218)
+	Instance.new("UICorner", fill)
+
+	local dragging = false
+	bar.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+		end
+	end)
+	bar.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local pos = math.clamp((UserInputService:GetMouseLocation().X - bar.AbsolutePosition.X)/bar.AbsoluteSize.X,0,1)
+			fill.Size = UDim2.new(pos,0,1,0)
+			local value = min + pos*(max-min)
+			textLabel.Text = label.." : "..math.floor(value)
+			callback(value)
+		end
+	end)
+	return sliderFrame
+end
+
+-- SPEED
+local speed = 50
+local speedOn = false
+local speedBtn = createButton("Speed: OFF",50,Color3.fromRGB(50,50,50))
+speedBtn.MouseButton1Click:Connect(function()
+	speedOn = not speedOn
+	speedBtn.Text = speedOn and "Speed: ON" or "Speed: OFF"
+	Humanoid.WalkSpeed = speedOn and speed or 16
+end)
+createSlider("Speed",90,16,200,50,function(val)
+	speed = val
+	if speedOn then Humanoid.WalkSpeed = speed end
+end)
+
+-- FLY
+local flying = false
+local flySpeed = 50
+local flyBtn = createButton("Fly: OFF",150,Color3.fromRGB(50,50,50))
+flyBtn.MouseButton1Click:Connect(function()
+	flying = not flying
+	flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+end)
+createSlider("Fly Speed",190,10,300,50,function(val)
+	flySpeed = val
+end)
+
+RunService.Heartbeat:Connect(function()
+	if flying then
+		local move = Vector3.new(0,0,0)
+		local cf = Camera.CFrame
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + cf.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move - cf.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move - cf.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + cf.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,1,0) end
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move - Vector3.new(0,1,0) end
+		if move.Magnitude > 0 then move = move.Unit end
+		HRP.Velocity = move * flySpeed
+	end
+end)
+
+-- JUMPBOOST
+local jumpBoost = 100
+local jumpBoostOn = false
+local jumpBtn = createButton("JumpBoost: OFF",250,Color3.fromRGB(50,50,50))
+jumpBtn.MouseButton1Click:Connect(function()
+	jumpBoostOn = not jumpBoostOn
+	jumpBtn.Text = jumpBoostOn and "JumpBoost: ON" or "JumpBoost: OFF"
+	Humanoid.JumpPower = jumpBoostOn and jumpBoost or 50
+end)
+createSlider("JumpBoost",290,50,500,100,function(val)
+	jumpBoost = val
+	if jumpBoostOn then Humanoid.JumpPower = jumpBoost end
+end)
+
+-- NOCLIP
+local noclipOn = false
+local noclipBtn = createButton("Noclip: OFF",350,Color3.fromRGB(50,50,50))
+noclipBtn.MouseButton1Click:Connect(function()
+	noclipOn = not noclipOn
+	noclipBtn.Text = noclipOn and "Noclip: ON" or "Noclip: OFF"
+end)
+RunService.Stepped:Connect(function()
+	if noclipOn then
+		for _, p in pairs(Character:GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.CanCollide = false
+			end
+		end
+	end
+end)
+
+-- ESP
+local espOn = false
+local espBtn = createButton("ESP: OFF",390,Color3.fromRGB(50,50,50))
+local espBoxes = {}
+espBtn.MouseButton1Click:Connect(function()
+	espOn = not espOn
+	espBtn.Text = espOn and "ESP: ON" or "ESP: OFF"
+	if not espOn then
+		for _, box in pairs(espBoxes) do box:Destroy() end
+		espBoxes = {}
+	end
+end)
+RunService.RenderStepped:Connect(function()
+	if espOn then
+		for _, plr in pairs(Players:GetPlayers()) do
+			if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				if not espBoxes[plr] then
+					local box = Instance.new("BoxHandleAdornment")
+					box.Adornee = plr.Character.HumanoidRootPart
+					box.Size = Vector3.new(2,3,1)
+					box.Color3 = Color3.fromRGB(255,0,0)
+					box.Transparency = 0.5
+					box.AlwaysOnTop = true
+					box.Parent = workspace
+					espBoxes[plr] = box
+				end
+			end
+		end
+	end
+end)
+
+-- TELEPORT
+local teleportVisible = false
+local teleportBtn = createButton("Teleport: Click to choose",430,Color3.fromRGB(50,50,50))
+local teleportFrame = Instance.new("Frame", main)
+teleportFrame.Size = UDim2.new(0,320,0,0)
+teleportFrame.Position = UDim2.new(0,20,0,460)
+teleportFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+Instance.new("UICorner", teleportFrame)
+local uiList = Instance.new("UIListLayout", teleportFrame)
+uiList.SortOrder = Enum.SortOrder.LayoutOrder
+uiList.Padding = UDim.new(0,5)
+local selectedPlayer
+
+local function refreshTeleportList()
+	for _, v in pairs(teleportFrame:GetChildren()) do
+		if v:IsA("TextButton") then v:Destroy() end
+	end
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer then
+			local btn = Instance.new("TextButton", teleportFrame)
+			btn.Size = UDim2.new(1,0,0,25)
+			btn.Text = plr.Name
+			btn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+			btn.TextColor3 = Color3.fromRGB(255,255,255)
+			btn.Font = Enum.Font.Gotham
+			btn.TextSize = 14
+			Instance.new("UICorner", btn)
+			btn.MouseButton1Click:Connect(function()
+				selectedPlayer = plr
+				HRP.CFrame = plr.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+				teleportVisible = false
+				teleportFrame.Size = UDim2.new(0,320,0,0)
+			end)
+		end
+	end
+	if teleportVisible then
+		local count = #teleportFrame:GetChildren()
+		teleportFrame.Size = UDim2.new(0,320,0,25*count)
+	else
+		teleportFrame.Size = UDim2.new(0,320,0,0)
+	end
+end
+
+teleportBtn.MouseButton1Click:Connect(function()
+	teleportVisible = not teleportVisible
+	refreshTeleportList()
+end)
+Players.PlayerAdded:Connect(refreshTeleportList)
+Players.PlayerRemoving:Connect(refreshTeleportList)
+
+-- Discord Button
+local discordBtn = createButton("Join Discord",500,Color3.fromRGB(114,137,218))
+discordBtn.MouseButton1Click:Connect(function()
+	if setclipboard then
+		setclipboard("https://discord.puszekcraft.pl")
+	end
+	game.StarterGui:SetCore("SendNotification", {
+		Title = "Discord",
+		Text = "Link skopiowany – otwórz w przeglądarce",
+		Duration = 4
+	})
+end)
+
+end)
