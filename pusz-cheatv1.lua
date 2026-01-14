@@ -1,10 +1,10 @@
 pcall(function()
-if not game:IsLoaded() then
-	game.Loaded:Wait()
-end
-
+-- Services
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- Local Player
 local LocalPlayer = Players.LocalPlayer
 local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
@@ -14,13 +14,13 @@ local Camera = workspace.CurrentCamera
 -- GUI Parent
 local parent = game:FindFirstChild("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
 local gui = Instance.new("ScreenGui", parent)
-gui.Name = "PUSZ-HUB"
+gui.Name = "PUSZ_HUB"
 gui.ResetOnSpawn = false
 
 -- Voidware Style Main Frame
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 320, 0, 400)
-main.Position = UDim2.new(0.5, -160, 0.5, -200)
+main.Size = UDim2.new(0, 340, 0, 500)
+main.Position = UDim2.new(0.5, -170, 0.5, -250)
 main.BackgroundColor3 = Color3.fromRGB(25,25,25)
 main.Active = true
 main.Draggable = true
@@ -39,7 +39,7 @@ title.TextSize = 18
 local function createButton(text,posY,color)
 	local btn = Instance.new("TextButton", main)
 	btn.Position = UDim2.new(0,20,0,posY)
-	btn.Size = UDim2.new(0,280,0,35)
+	btn.Size = UDim2.new(0,300,0,35)
 	btn.Text = text
 	btn.BackgroundColor3 = color
 	btn.TextColor3 = Color3.new(1,1,1)
@@ -49,43 +49,65 @@ local function createButton(text,posY,color)
 	return btn
 end
 
--- Fly
-local flying = false
-local flySpeed = 50
-local bv, bg
-local flyBtn = createButton("Fly: OFF",50,Color3.fromRGB(50,50,50))
-flyBtn.MouseButton1Click:Connect(function()
-	flying = not flying
-	flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
-	if flying then
-		bv = Instance.new("BodyVelocity", HRP)
-		bv.MaxForce = Vector3.new(400000,400000,400000)
-		bg = Instance.new("BodyGyro", HRP)
-		bg.MaxTorque = Vector3.new(400000,400000,400000)
-	else
-		if bv then bv:Destroy() end
-		if bg then bg:Destroy() end
-	end
-end)
-
--- Speed / Sprint
+-- SPEED / SPRINT
 local speedOn = false
 local normalSpeed = 16
 local sprintSpeed = 50
-local speedBtn = createButton("Speed: OFF",100,Color3.fromRGB(50,50,50))
+local speedBtn = createButton("Speed: OFF",50,Color3.fromRGB(50,50,50))
 speedBtn.MouseButton1Click:Connect(function()
 	speedOn = not speedOn
 	speedBtn.Text = speedOn and "Speed: ON" or "Speed: OFF"
 	Humanoid.WalkSpeed = speedOn and sprintSpeed or normalSpeed
 end)
 
--- Noclip
+-- FLY (poprawiony)
+local flying = false
+local flySpeed = 50
+local flyDir = Vector3.new(0,0,0)
+local flyBtn = createButton("Fly: OFF",100,Color3.fromRGB(50,50,50))
+
+flyBtn.MouseButton1Click:Connect(function()
+	flying = not flying
+	flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
+end)
+
+local moveVector = Vector3.new(0,0,0)
+RunService.Heartbeat:Connect(function()
+	if flying then
+		local camCF = Camera.CFrame
+		moveVector = Vector3.new(0,0,0)
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVector = moveVector + camCF.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVector = moveVector - camCF.LookVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVector = moveVector - camCF.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveVector = moveVector + camCF.RightVector end
+		if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveVector = moveVector + Vector3.new(0,1,0) end
+		if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then moveVector = moveVector - Vector3.new(0,1,0) end
+		if moveVector.Magnitude > 0 then
+			moveVector = moveVector.Unit
+		end
+		HRP.Velocity = moveVector * flySpeed
+		HRP.Anchored = false
+	end
+end)
+
+-- JUMPBOOST
+local jumpBoostOn = false
+local jumpPower = 100
+local jumpBtn = createButton("JumpBoost: OFF",150,Color3.fromRGB(50,50,50))
+jumpBtn.MouseButton1Click:Connect(function()
+	jumpBoostOn = not jumpBoostOn
+	jumpBtn.Text = jumpBoostOn and "JumpBoost: ON" or "JumpBoost: OFF"
+	Humanoid.JumpPower = jumpBoostOn and jumpPower or 50
+end)
+
+-- NOCLIP
 local noclipOn = false
-local noclipBtn = createButton("Noclip: OFF",150,Color3.fromRGB(50,50,50))
+local noclipBtn = createButton("Noclip: OFF",200,Color3.fromRGB(50,50,50))
 noclipBtn.MouseButton1Click:Connect(function()
 	noclipOn = not noclipOn
 	noclipBtn.Text = noclipOn and "Noclip: ON" or "Noclip: OFF"
 end)
+
 RunService.Stepped:Connect(function()
 	if noclipOn then
 		for _, part in pairs(Character:GetDescendants()) do
@@ -96,25 +118,19 @@ RunService.Stepped:Connect(function()
 	end
 end)
 
--- JumpBoost
-local jumpBoostOn = false
-local jumpBoostPower = 100
-local jumpBtn = createButton("JumpBoost: OFF",200,Color3.fromRGB(50,50,50))
-jumpBtn.MouseButton1Click:Connect(function()
-	jumpBoostOn = not jumpBoostOn
-	jumpBtn.Text = jumpBoostOn and "JumpBoost: ON" or "JumpBoost: OFF"
-	Humanoid.JumpPower = jumpBoostOn and jumpBoostPower or 50
-end)
-
 -- ESP
 local espOn = false
 local espBtn = createButton("ESP: OFF",250,Color3.fromRGB(50,50,50))
+local espBoxes = {}
 espBtn.MouseButton1Click:Connect(function()
 	espOn = not espOn
 	espBtn.Text = espOn and "ESP: ON" or "ESP: OFF"
+	if not espOn then
+		for _, box in pairs(espBoxes) do box:Destroy() end
+		espBoxes = {}
+	end
 end)
 
-local espBoxes = {}
 RunService.RenderStepped:Connect(function()
 	if espOn then
 		for _, plr in pairs(Players:GetPlayers()) do
@@ -122,8 +138,8 @@ RunService.RenderStepped:Connect(function()
 				if not espBoxes[plr] then
 					local box = Instance.new("BoxHandleAdornment")
 					box.Adornee = plr.Character.HumanoidRootPart
-					box.Color3 = Color3.fromRGB(255,0,0)
 					box.Size = Vector3.new(2,3,1)
+					box.Color3 = Color3.fromRGB(255,0,0)
 					box.Transparency = 0.5
 					box.AlwaysOnTop = true
 					box.Parent = workspace
@@ -131,25 +147,55 @@ RunService.RenderStepped:Connect(function()
 				end
 			end
 		end
-	else
-		for _, box in pairs(espBoxes) do
-			box:Destroy()
+	end
+end)
+
+-- PLAYER TELEPORT
+local playersListFrame = Instance.new("Frame", main)
+playersListFrame.Size = UDim2.new(0,300,0,100)
+playersListFrame.Position = UDim2.new(0,20,0,310)
+playersListFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
+Instance.new("UICorner", playersListFrame)
+local uiList = Instance.new("UIListLayout", playersListFrame)
+uiList.SortOrder = Enum.SortOrder.LayoutOrder
+uiList.Padding = UDim.new(0,5)
+
+local selectedPlayer
+
+local function refreshPlayerList()
+	for i,v in pairs(playersListFrame:GetChildren()) do
+		if v:IsA("TextButton") then v:Destroy() end
+	end
+	for _, plr in pairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer then
+			local btn = Instance.new("TextButton", playersListFrame)
+			btn.Size = UDim2.new(1,0,0,25)
+			btn.Text = plr.Name
+			btn.BackgroundColor3 = Color3.fromRGB(70,70,70)
+			btn.TextColor3 = Color3.fromRGB(255,255,255)
+			btn.Font = Enum.Font.Gotham
+			btn.TextSize = 14
+			Instance.new("UICorner", btn)
+			btn.MouseButton1Click:Connect(function()
+				selectedPlayer = plr
+			end)
 		end
-		espBoxes = {}
 	end
-end)
+end
 
--- Teleport to player
-local tpBtn = createButton("Teleport to Player",300,Color3.fromRGB(50,50,50))
+refreshPlayerList()
+Players.PlayerAdded:Connect(refreshPlayerList)
+Players.PlayerRemoving:Connect(refreshPlayerList)
+
+local tpBtn = createButton("Teleport to Selected",420,Color3.fromRGB(50,50,50))
 tpBtn.MouseButton1Click:Connect(function()
-	local targetName = game:GetService("Players"):GetPlayers()[2] -- przykładowo teleport do 2 gracza w liscie
-	if targetName and targetName.Character and targetName.Character:FindFirstChild("HumanoidRootPart") then
-		HRP.CFrame = targetName.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+	if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+		HRP.CFrame = selectedPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
 	end
 end)
 
--- Discord
-local discordBtn = createButton("Join Discord",350,Color3.fromRGB(114,137,218))
+-- Discord Button
+local discordBtn = createButton("Join Discord",470,Color3.fromRGB(114,137,218))
 discordBtn.MouseButton1Click:Connect(function()
 	if setclipboard then
 		setclipboard("https://discord.puszekcraft.pl")
@@ -159,23 +205,6 @@ discordBtn.MouseButton1Click:Connect(function()
 		Text = "Link skopiowany – otwórz w przeglądarce",
 		Duration = 4
 	})
-end)
-
--- Fly movement update
-RunService.Heartbeat:Connect(function()
-	if flying and HRP then
-		local move = Vector3.new(0,0,0)
-		local keys = game:GetService("UserInputService"):GetKeysPressed()
-		for _, key in pairs(keys) do
-			if key.KeyCode == Enum.KeyCode.W then move = move + Camera.CFrame.LookVector end
-			if key.KeyCode == Enum.KeyCode.S then move = move - Camera.CFrame.LookVector end
-			if key.KeyCode == Enum.KeyCode.A then move = move - Camera.CFrame.RightVector end
-			if key.KeyCode == Enum.KeyCode.D then move = move + Camera.CFrame.RightVector end
-		end
-		if bv then
-			bv.Velocity = move.Unit * flySpeed
-		end
-	end
 end)
 
 end)
