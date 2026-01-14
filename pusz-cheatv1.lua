@@ -17,7 +17,16 @@ local gui = Instance.new("ScreenGui", parent)
 gui.Name = "PUSZ_HUB"
 gui.ResetOnSpawn = false
 
--- Voidware Style Main Frame
+-- Toggle GUI visibility
+local guiVisible = true
+UserInputService.InputBegan:Connect(function(input, gp)
+	if not gp and input.KeyCode == Enum.KeyCode.RightControl then
+		guiVisible = not guiVisible
+		gui.Enabled = guiVisible
+	end
+end)
+
+-- Main Frame
 local main = Instance.new("Frame", gui)
 main.Size = UDim2.new(0, 340, 0, 500)
 main.Position = UDim2.new(0.5, -170, 0.5, -250)
@@ -60,10 +69,9 @@ speedBtn.MouseButton1Click:Connect(function()
 	Humanoid.WalkSpeed = speedOn and sprintSpeed or normalSpeed
 end)
 
--- FLY (poprawiony)
+-- FLY
 local flying = false
 local flySpeed = 50
-local flyDir = Vector3.new(0,0,0)
 local flyBtn = createButton("Fly: OFF",100,Color3.fromRGB(50,50,50))
 
 flyBtn.MouseButton1Click:Connect(function()
@@ -71,11 +79,11 @@ flyBtn.MouseButton1Click:Connect(function()
 	flyBtn.Text = flying and "Fly: ON" or "Fly: OFF"
 end)
 
-local moveVector = Vector3.new(0,0,0)
+-- Fly movement
 RunService.Heartbeat:Connect(function()
 	if flying then
+		local moveVector = Vector3.new(0,0,0)
 		local camCF = Camera.CFrame
-		moveVector = Vector3.new(0,0,0)
 		if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveVector = moveVector + camCF.LookVector end
 		if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveVector = moveVector - camCF.LookVector end
 		if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveVector = moveVector - camCF.RightVector end
@@ -86,7 +94,6 @@ RunService.Heartbeat:Connect(function()
 			moveVector = moveVector.Unit
 		end
 		HRP.Velocity = moveVector * flySpeed
-		HRP.Anchored = false
 	end
 end)
 
@@ -107,7 +114,6 @@ noclipBtn.MouseButton1Click:Connect(function()
 	noclipOn = not noclipOn
 	noclipBtn.Text = noclipOn and "Noclip: ON" or "Noclip: OFF"
 end)
-
 RunService.Stepped:Connect(function()
 	if noclipOn then
 		for _, part in pairs(Character:GetDescendants()) do
@@ -130,7 +136,6 @@ espBtn.MouseButton1Click:Connect(function()
 		espBoxes = {}
 	end
 end)
-
 RunService.RenderStepped:Connect(function()
 	if espOn then
 		for _, plr in pairs(Players:GetPlayers()) do
@@ -151,8 +156,9 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- PLAYER TELEPORT
+local teleportFrameVisible = false
 local playersListFrame = Instance.new("Frame", main)
-playersListFrame.Size = UDim2.new(0,300,0,100)
+playersListFrame.Size = UDim2.new(0,300,0,0) -- początkowo schowane
 playersListFrame.Position = UDim2.new(0,20,0,310)
 playersListFrame.BackgroundColor3 = Color3.fromRGB(40,40,40)
 Instance.new("UICorner", playersListFrame)
@@ -181,15 +187,24 @@ local function refreshPlayerList()
 			end)
 		end
 	end
+	if teleportFrameVisible then
+		local count = #playersListFrame:GetChildren()
+		playersListFrame.Size = UDim2.new(0,300,0,25*count)
+	else
+		playersListFrame.Size = UDim2.new(0,300,0,0)
+	end
 end
 
 refreshPlayerList()
 Players.PlayerAdded:Connect(refreshPlayerList)
 Players.PlayerRemoving:Connect(refreshPlayerList)
 
-local tpBtn = createButton("Teleport to Selected",420,Color3.fromRGB(50,50,50))
+-- Teleport Button
+local tpBtn = createButton("Teleport: Click to Choose",420,Color3.fromRGB(50,50,50))
 tpBtn.MouseButton1Click:Connect(function()
-	if selectedPlayer and selectedPlayer.Character and selectedPlayer.Character:FindFirstChild("HumanoidRootPart") then
+	teleportFrameVisible = not teleportFrameVisible
+	refreshPlayerList()
+	if selectedPlayer then
 		HRP.CFrame = selectedPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
 	end
 end)
